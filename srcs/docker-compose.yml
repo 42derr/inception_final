@@ -1,0 +1,153 @@
+services:
+  mariadb:
+    build:
+      context: ./requirements/mariadb
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ../secrets/mysql_root_password.txt:/run/secrets/mysql_root_password:ro
+      - ../secrets/mysql_password.txt:/run/secrets/mysql_password:ro
+    networks:
+      - inception
+
+  wordpress:
+    build:
+      context: ./requirements/wordpress
+    restart: always
+    depends_on:
+      - mariadb
+      - rediscache
+    expose:
+      - "9000"
+    env_file:
+      - .env
+    environment:
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+      WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
+      WP_USER_PASSWORD_FILE: /run/secrets/wp_user_password
+    volumes:
+      - wordpress_files:/var/www/html
+      - ../secrets/mysql_password.txt:/run/secrets/mysql_password:ro
+      - ../secrets/wp_admin_password.txt:/run/secrets/wp_admin_password:ro
+      - ../secrets/wp_user_password.txt:/run/secrets/wp_user_password:ro
+    networks:
+      - inception
+
+  nginx:
+    build:
+      context: ./requirements/nginx
+    restart: always
+    depends_on:
+      - wordpress
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - wordpress_files:/var/www/html
+      - ./requirements/nginx/conf:/etc/nginx/conf.d
+    networks:
+      - inception
+
+  rediscache:
+    build:
+      context: ./bonus/rediscache
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - inception
+
+  ftp:
+    build:
+      context: ./bonus/ftp
+    restart: always
+    depends_on:
+      - wordpress
+    env_file:
+      - .env
+    environment:
+      FTP_PASS_FILE: /run/secrets/ftp_password
+    volumes:
+      - wordpress_files:/home/ftpuser/ftp
+      - ../secrets/ftp_password.txt:/run/secrets/ftp_password:ro
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    networks:
+      - inception
+
+  static_site:
+    build:
+      context: ./bonus/static_site
+    ports:
+      - "2222:2222"
+    networks:
+      - inception
+    restart: always
+
+  adminer:
+    build:
+      context: ./bonus/adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - inception
+    restart: always
+    depends_on:
+      - mariadb
+
+  portainer:
+    build:
+      context: ./bonus/portainer
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    ports:
+      - "9000:9000"
+    networks:
+      - inception
+
+# volumes:
+#   mariadb_data:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       device: /home/dfasius/data/mariadb
+#       o: bind
+#   wordpress_files:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       device: /home/dfasius/data/wordpress
+#       o: bind
+#   redis_data:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       device: /home/dfasius/data/redis
+#       o: bind
+#   portainer_data:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       device: /home/dfasius/data/portainer
+#       o: bind
+
+volumes:
+  mariadb_data:
+  wordpress_files:
+  redis_data:
+  portainer_data:
+
+
+networks:
+  inception:
+    driver: bridge
