@@ -1,0 +1,45 @@
+study docker command
+docker compose ps
+
+docker network ls
+
+curl -v http://dfasius.42.fr
+
+
+docker compose exec mariadb bash
+
+mysql -u root -p
+
+SHOW DATABASES;
+
+USE wordpress;
+SHOW TABLES;
+exit;
+
+rediscache
+wp redis status --allow-root
+redis-cli
+KEYS *
+exit
+
+adminer
+http://localhost:8080/
+mariadb
+wpuser
+wppass
+wordpress
+
+ftp
+ftp 127.0.0.1 21
+ftpuser
+ftppass
+
+cd to wp-content
+get image.png
+
+static site
+http://localhost:2222/
+
+portainers
+docker compose restart portainer
+http://localhost:9000/
